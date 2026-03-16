@@ -41,10 +41,4 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the application.
 
-## Learn More
-
-To learn more about the technologies used in this project:
-
-- [Next.js Documentation](https://nextjs.org/docs)
-- [Supabase Documentation](https://supabase.com/docs)
-- [Vercel AI SDK Docs](https://sdk.vercel.ai/docs)
+[Vercel AI SDK Docs](https://sdk.vercel.ai/docs)
