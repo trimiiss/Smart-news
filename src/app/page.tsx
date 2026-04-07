@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { getSupabaseEnv } from "@/lib/supabase/env";
 import { redirect } from "next/navigation";
 import {
   Zap,
@@ -11,13 +12,17 @@ import {
 } from "lucide-react";
 
 export default async function HomePage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { isConfigured } = getSupabaseEnv();
 
-  if (user) {
-    redirect("/dashboard");
+  if (isConfigured) {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (user) {
+      redirect("/dashboard");
+    }
   }
 
   return (
