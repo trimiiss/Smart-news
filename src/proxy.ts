@@ -1,9 +1,6 @@
 import { type NextRequest } from "next/server";
-// Note: You may want to rename your helper file too, but the 
-// error specifically targets the root entry point.
-import { updateSession } from "@/lib/supabase/middleware"; 
+import { updateSession } from "@/lib/supabase/middleware";
 
-// 1. Rename the function from 'middleware' to 'proxy'
 export async function proxy(request: NextRequest) {
   return await updateSession(request);
 }

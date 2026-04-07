@@ -1,7 +1,7 @@
 "use client";
-// signin form
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { getSupabaseEnv } from "@/lib/supabase/env";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Zap } from "lucide-react";
@@ -13,12 +13,21 @@ export default function SignupPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-  const supabase = createClient();
+  const { isConfigured } = getSupabaseEnv();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+
+    if (!isConfigured) {
+      setError(
+        "Supabase is not configured in this environment yet. Add the Vercel env vars and redeploy."
+      );
+      return;
+    }
+
     setLoading(true);
+    const supabase = createClient();
 
     if (password.length < 6) {
       setError("Password must be at least 6 characters.");
@@ -61,6 +70,15 @@ export default function SignupPage() {
         </div>
 
         <form className="auth-form" onSubmit={handleSubmit}>
+          {!isConfigured && (
+            <div className="alert alert-error">
+              <span>
+                Authentication is temporarily unavailable because Supabase env
+                vars are missing in this deployment.
+              </span>
+            </div>
+          )}
+
           {error && (
             <div className="alert alert-error">
               <span>{error}</span>
@@ -79,6 +97,7 @@ export default function SignupPage() {
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
               required
+              disabled={!isConfigured || loading}
               autoComplete="name"
             />
           </div>
@@ -95,6 +114,7 @@ export default function SignupPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
+              disabled={!isConfigured || loading}
               autoComplete="email"
             />
           </div>
@@ -113,13 +133,14 @@ export default function SignupPage() {
               required
               autoComplete="new-password"
               minLength={6}
+              disabled={!isConfigured || loading}
             />
           </div>
 
           <button
             type="submit"
             className="btn btn-primary btn-lg"
-            disabled={loading}
+            disabled={!isConfigured || loading}
             style={{ width: "100%", marginTop: "8px" }}
           >
             {loading ? <span className="spinner" /> : "Create Account"}

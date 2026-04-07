@@ -1,8 +1,8 @@
 "use client";
-// login form
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { getSupabaseEnv } from "@/lib/supabase/env";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Zap } from "lucide-react";
@@ -13,12 +13,21 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-  const supabase = createClient();
+  const { isConfigured } = getSupabaseEnv();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+
+    if (!isConfigured) {
+      setError(
+        "Supabase is not configured in this environment yet. Add the Vercel env vars and redeploy."
+      );
+      return;
+    }
+
     setLoading(true);
+    const supabase = createClient();
 
     const { error: authError } = await supabase.auth.signInWithPassword({
       email,
@@ -48,6 +57,15 @@ export default function LoginPage() {
         </div>
 
         <form className="auth-form" onSubmit={handleSubmit}>
+          {!isConfigured && (
+            <div className="alert alert-error">
+              <span>
+                Authentication is temporarily unavailable because Supabase env
+                vars are missing in this deployment.
+              </span>
+            </div>
+          )}
+
           {error && (
             <div className="alert alert-error">
               <span>{error}</span>
@@ -66,6 +84,7 @@ export default function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
+              disabled={!isConfigured || loading}
               autoComplete="email"
             />
           </div>
@@ -82,6 +101,7 @@ export default function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
+              disabled={!isConfigured || loading}
               autoComplete="current-password"
             />
           </div>
@@ -89,7 +109,7 @@ export default function LoginPage() {
           <button
             type="submit"
             className="btn btn-primary btn-lg"
-            disabled={loading}
+            disabled={!isConfigured || loading}
             style={{ width: "100%", marginTop: "8px" }}
           >
             {loading ? <span className="spinner" /> : "Sign In"}
