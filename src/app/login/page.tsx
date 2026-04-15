@@ -1,11 +1,11 @@
 "use client";
 
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { Zap } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { getSupabaseEnv } from "@/lib/supabase/env";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { Zap } from "lucide-react";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -15,8 +15,8 @@ export default function LoginPage() {
   const router = useRouter();
   const { isConfigured } = getSupabaseEnv();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
     setError("");
 
     if (!isConfigured) {
@@ -37,10 +37,11 @@ export default function LoginPage() {
     if (authError) {
       setError(authError.message);
       setLoading(false);
-    } else {
-      router.push("/dashboard");
-      router.refresh();
+      return;
     }
+
+    router.push("/dashboard");
+    router.refresh();
   };
 
   return (
@@ -82,7 +83,7 @@ export default function LoginPage() {
               className="form-input"
               placeholder="you@example.com"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(event) => setEmail(event.target.value)}
               required
               disabled={!isConfigured || loading}
               autoComplete="email"
@@ -97,9 +98,9 @@ export default function LoginPage() {
               id="password"
               type="password"
               className="form-input"
-              placeholder="••••••••"
+              placeholder="Enter your password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(event) => setPassword(event.target.value)}
               required
               disabled={!isConfigured || loading}
               autoComplete="current-password"
@@ -117,8 +118,7 @@ export default function LoginPage() {
         </form>
 
         <div className="auth-footer">
-          Don&apos;t have an account?{" "}
-          <Link href="/signup">Sign up</Link>
+          Don&apos;t have an account? <Link href="/signup">Sign up</Link>
         </div>
       </div>
     </div>

@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Briefcase, Check, MessageCircle, Save, Sparkles, Text } from "lucide-react";
+import InlineNotice from "@/components/InlineNotice";
 import { createClient } from "@/lib/supabase/client";
-import { Save, Check } from "lucide-react";
 
 interface Profile {
   voice: string;
@@ -13,10 +14,30 @@ interface Profile {
 }
 
 const VOICE_OPTIONS = [
-  { value: "casual", icon: "😎", label: "Casual", desc: "Friendly and conversational" },
-  { value: "professional", icon: "💼", label: "Professional", desc: "Clear and formal" },
-  { value: "witty", icon: "🎭", label: "Witty", desc: "Fun with personality" },
-  { value: "tldr", icon: "⚡", label: "TL;DR", desc: "Ultra-concise bullets" },
+  {
+    value: "casual",
+    icon: MessageCircle,
+    label: "Casual",
+    desc: "Friendly and conversational",
+  },
+  {
+    value: "professional",
+    icon: Briefcase,
+    label: "Professional",
+    desc: "Clear and formal",
+  },
+  {
+    value: "witty",
+    icon: Sparkles,
+    label: "Witty",
+    desc: "Fun with personality",
+  },
+  {
+    value: "tldr",
+    icon: Text,
+    label: "TL;DR",
+    desc: "Ultra-concise bullets",
+  },
 ];
 
 const TOPIC_OPTIONS = [
@@ -51,72 +72,107 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const supabase = createClient();
 
   useEffect(() => {
     const fetchProfile = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) return;
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
 
-      const { data } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", user.id)
-        .single();
+        if (!user) {
+          setError("Your session expired. Please sign in again.");
+          return;
+        }
 
-      if (data) {
-        setProfile({
-          voice: data.voice || "professional",
-          summary_length: data.summary_length || "medium",
-          briefing_time: data.briefing_time || "08:00",
-          topics: data.topics || [],
-          display_name: data.display_name || "",
-        });
+        const { data, error: profileError } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", user.id)
+          .single();
+
+        if (profileError) {
+          setError("We could not load your settings right now.");
+          return;
+        }
+
+        if (data) {
+          setProfile({
+            voice: data.voice || "professional",
+            summary_length: data.summary_length || "medium",
+            briefing_time: data.briefing_time || "08:00",
+            topics: data.topics || [],
+            display_name: data.display_name || "",
+          });
+        }
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
+
     fetchProfile();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleSave = async () => {
     setSaving(true);
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) return;
+    setSaved(false);
+    setError(null);
 
-    await supabase
-      .from("profiles")
-      .update({
-        voice: profile.voice,
-        summary_length: profile.summary_length,
-        briefing_time: profile.briefing_time,
-        topics: profile.topics,
-        display_name: profile.display_name,
-      })
-      .eq("id", user.id);
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
-    setSaving(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+      if (!user) {
+        setError("Your session expired. Please sign in again.");
+        return;
+      }
+
+      const { error: updateError } = await supabase
+        .from("profiles")
+        .update({
+          voice: profile.voice,
+          summary_length: profile.summary_length,
+          briefing_time: profile.briefing_time,
+          topics: profile.topics,
+          display_name: profile.display_name,
+        })
+        .eq("id", user.id);
+
+      if (updateError) {
+        setError(updateError.message);
+        return;
+      }
+
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const toggleTopic = (topic: string) => {
-    setProfile((prev) => ({
-      ...prev,
-      topics: prev.topics.includes(topic)
-        ? prev.topics.filter((t) => t !== topic)
-        : [...prev.topics, topic],
+    setProfile((previous) => ({
+      ...previous,
+      topics: previous.topics.includes(topic)
+        ? previous.topics.filter((entry) => entry !== topic)
+        : [...previous.topics, topic],
     }));
   };
 
   if (loading) {
     return (
       <div className="page-enter">
-        <h1 style={{ fontSize: "var(--text-2xl)", fontWeight: 700, marginBottom: 24 }}>
+        <h1
+          style={{
+            fontSize: "var(--text-2xl)",
+            fontWeight: 700,
+            marginBottom: 24,
+          }}
+        >
           Settings
         </h1>
         <div className="skeleton" style={{ height: 300, borderRadius: 14 }} />
@@ -154,44 +210,67 @@ export default function SettingsPage() {
         </button>
       </div>
 
-      {/* Display Name */}
+      {error && (
+        <div style={{ marginBottom: 24 }}>
+          <InlineNotice tone="error" message={error} />
+        </div>
+      )}
+
+      {!error && saved && (
+        <div style={{ marginBottom: 24 }}>
+          <InlineNotice tone="success" message="Your settings were saved." />
+        </div>
+      )}
+
       <div className="settings-section">
         <h2 className="settings-section-title">Profile</h2>
-        <p className="settings-section-desc">Your display name and personal info.</p>
+        <p className="settings-section-desc">
+          Your display name and personal info.
+        </p>
         <div className="form-group" style={{ maxWidth: 360 }}>
           <label className="form-label">Display Name</label>
           <input
             type="text"
             className="form-input"
             value={profile.display_name}
-            onChange={(e) => setProfile({ ...profile, display_name: e.target.value })}
+            onChange={(event) =>
+              setProfile({ ...profile, display_name: event.target.value })
+            }
           />
         </div>
       </div>
 
-      {/* Voice */}
       <div className="settings-section">
         <h2 className="settings-section-title">Summarization Voice</h2>
         <p className="settings-section-desc">
           Choose how your AI briefing should sound.
         </p>
         <div className="settings-grid">
-          {VOICE_OPTIONS.map((v) => (
-            <button
-              key={v.value}
-              type="button"
-              className={`voice-option ${profile.voice === v.value ? "selected" : ""}`}
-              onClick={() => setProfile({ ...profile, voice: v.value })}
-            >
-              <div className="voice-option-icon">{v.icon}</div>
-              <div className="voice-option-label">{v.label}</div>
-              <div className="voice-option-desc">{v.desc}</div>
-            </button>
-          ))}
+          {VOICE_OPTIONS.map((voiceOption) => {
+            const Icon = voiceOption.icon;
+
+            return (
+              <button
+                key={voiceOption.value}
+                type="button"
+                className={`voice-option ${
+                  profile.voice === voiceOption.value ? "selected" : ""
+                }`}
+                onClick={() =>
+                  setProfile({ ...profile, voice: voiceOption.value })
+                }
+              >
+                <div className="voice-option-icon">
+                  <Icon size={24} />
+                </div>
+                <div className="voice-option-label">{voiceOption.label}</div>
+                <div className="voice-option-desc">{voiceOption.desc}</div>
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      {/* Summary Length */}
       <div className="settings-section">
         <h2 className="settings-section-title">Summary Length</h2>
         <p className="settings-section-desc">
@@ -204,10 +283,12 @@ export default function SettingsPage() {
             min={0}
             max={2}
             value={["short", "medium", "long"].indexOf(profile.summary_length)}
-            onChange={(e) =>
+            onChange={(event) =>
               setProfile({
                 ...profile,
-                summary_length: ["short", "medium", "long"][parseInt(e.target.value)],
+                summary_length: ["short", "medium", "long"][
+                  parseInt(event.target.value, 10)
+                ],
               })
             }
           />
@@ -236,7 +317,6 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* Briefing Time */}
       <div className="settings-section">
         <h2 className="settings-section-title">Briefing Time</h2>
         <p className="settings-section-desc">
@@ -247,16 +327,18 @@ export default function SettingsPage() {
             type="time"
             className="form-input"
             value={profile.briefing_time}
-            onChange={(e) => setProfile({ ...profile, briefing_time: e.target.value })}
+            onChange={(event) =>
+              setProfile({ ...profile, briefing_time: event.target.value })
+            }
           />
         </div>
       </div>
 
-      {/* Topics */}
       <div className="settings-section">
         <h2 className="settings-section-title">Topics of Interest</h2>
         <p className="settings-section-desc">
-          Select topics you&apos;re most interested in. This helps prioritize your briefing.
+          Select topics you&apos;re most interested in. This helps prioritize your
+          briefing.
         </p>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
           {TOPIC_OPTIONS.map((topic) => (

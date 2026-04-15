@@ -1,35 +1,16 @@
-import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
-
-interface Article {
-  title: string;
-  content: string;
-  source: string;
-  category: string;
-  url: string;
-}
-
-const VOICE_PROMPTS: Record<string, string> = {
-  casual:
-    "Write in a casual, friendly tone — like you're texting a smart friend. Use contractions, simple language, and feel free to add a bit of humor.",
-  professional:
-    "Write in a clear, professional tone. Be direct, well-structured, and informative. Avoid slang.",
-  witty:
-    "Write with wit and personality. Use clever observations, analogies, and a touch of humor while keeping the information accurate.",
-  tldr:
-    "Be ultra-concise. Use bullet points. Each summary should be 1-2 lines max. No fluff, just the key takeaway.",
-};
-
-const LENGTH_INSTRUCTIONS: Record<string, string> = {
-  short: "Keep each summary to 1-2 sentences.",
-  medium: "Write 3-4 sentence summaries.",
-  long: "Write a full paragraph summary with analysis.",
-};
+import {
+  buildFallbackBriefing,
+  LENGTH_INSTRUCTIONS,
+  parseBriefingResponse,
+  type SourceArticle,
+  VOICE_PROMPTS,
+} from "@/lib/briefings";
+import { createClient } from "@/lib/supabase/server";
 
 export async function POST() {
   try {
     const supabase = await createClient();
-
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -38,7 +19,6 @@ export async function POST() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Fetch user profile
     const { data: profile } = await supabase
       .from("profiles")
       .select("*")
@@ -48,24 +28,26 @@ export async function POST() {
     const voice = profile?.voice || "professional";
     const summaryLength = profile?.summary_length || "medium";
 
-    // Fetch user's feeds
     const { data: feeds, error: feedsError } = await supabase
       .from("feeds")
       .select("*")
       .eq("user_id", user.id);
-    
-    if (feedsError) console.error("Database Error (Feeds):", feedsError.message);
 
-    // Fetch user's unprocessed bookmarks
+    if (feedsError) {
+      console.error("Database Error (Feeds):", feedsError.message);
+    }
+
     const { data: bookmarks, error: bookmarksError } = await supabase
       .from("bookmarks")
       .select("*")
-      .eq("user_id", user.id);
+      .eq("user_id", user.id)
+      .eq("processed", false);
 
-    if (bookmarksError) console.error("Database Error (Bookmarks):", bookmarksError.message);
+    if (bookmarksError) {
+      console.error("Database Error (Bookmarks):", bookmarksError.message);
+    }
 
-    // Collect content from RSS feeds
-    const articles: Article[] = [];
+    const articles: SourceArticle[] = [];
 
     if (feeds && feeds.length > 0) {
       const Parser = (await import("rss-parser")).default;
@@ -93,19 +75,21 @@ export async function POST() {
 
           await supabase
             .from("feeds")
-            .update({ 
-              last_fetched: new Date().toISOString(), 
-              status: "active" 
+            .update({
+              last_fetched: new Date().toISOString(),
+              status: "active",
             })
             .eq("id", feed.id);
-        } catch (err: any) {
-          // Only log actual failures to the terminal
-          console.error(`Status: Error fetching ${feed.url} -> ${err.message}`);
+        } catch (error) {
+          const message =
+            error instanceof Error ? error.message : "Unknown feed error";
+          console.error(`Status: Error fetching ${feed.url} -> ${message}`);
+
           await supabase
             .from("feeds")
-            .update({ 
+            .update({
               status: "error",
-              title: `Error: Could not reach feed`
+              title: "Error: Could not reach feed",
             })
             .eq("id", feed.id);
         }
@@ -113,34 +97,34 @@ export async function POST() {
     }
 
     if (bookmarks && bookmarks.length > 0) {
-      for (const bm of bookmarks) {
+      for (const bookmark of bookmarks) {
         articles.push({
-          title: bm.note || bm.url,
-          content: bm.note || `Article from: ${bm.url}`,
+          title: bookmark.note || bookmark.url,
+          content: bookmark.note || `Article from: ${bookmark.url}`,
           source: "Bookmarked",
           category: "Saved",
-          url: bm.url,
+          url: bookmark.url,
         });
       }
     }
 
     if (articles.length === 0) {
-      return NextResponse.json({ 
-        message: "No content to summarize", 
+      return NextResponse.json({
+        message: "No content to summarize",
         items: 0,
         debug: {
           feedsCount: feeds?.length || 0,
           bookmarksCount: bookmarks?.length || 0,
-          userId: user.id
-        }
+          userId: user.id,
+        },
       });
     }
 
     const articleList = articles
       .slice(0, 20)
       .map(
-        (a, i) =>
-          `[${i + 1}] Title: ${a.title}\nSource: ${a.source}\nCategory: ${a.category}\nContent: ${a.content.slice(0, 500)}\nURL: ${a.url}`
+        (article, index) =>
+          `[${index + 1}] Title: ${article.title}\nSource: ${article.source}\nCategory: ${article.category}\nContent: ${article.content.slice(0, 500)}\nURL: ${article.url}`
       )
       .join("\n\n");
 
@@ -170,27 +154,9 @@ Return ONLY the JSON array, no other text.`;
 
     console.log("Groq AI response received, length:", aiResponseText.length);
 
-    // Parse JSON
-    let briefingContent: any[] = [];
-    try {
-      const jsonMatch = aiResponseText.match(/\[[\s\S]*\]/);
-      if (jsonMatch) {
-          briefingContent = JSON.parse(jsonMatch[0]);
-      } else {
-          briefingContent = JSON.parse(aiResponseText);
-      }
-    } catch (err) {
-      console.error("JSON Parsing Error:", err, "Response was:", aiResponseText);
-      briefingContent = articles.slice(0, 10).map(a => ({
-        title: a.title,
-        summary: a.content.slice(0, 200),
-        source: a.source,
-        category: a.category,
-        url: a.url
-      }));
-    }
+    const briefingContent =
+      parseBriefingResponse(aiResponseText) ?? buildFallbackBriefing(articles);
 
-    // Store in Supabase
     const today = new Date().toISOString().split("T")[0];
     const { error: upsertError } = await supabase.from("briefings").upsert(
       {
@@ -206,9 +172,9 @@ Return ONLY the JSON array, no other text.`;
       throw new Error(`Database error: ${upsertError.message}`);
     }
 
-    // Mark bookmarks as processed
     if (bookmarks && bookmarks.length > 0) {
-      const bookmarkIds = bookmarks.map((b) => b.id);
+      const bookmarkIds = bookmarks.map((bookmark) => bookmark.id);
+
       await supabase
         .from("bookmarks")
         .update({ processed: true })
@@ -216,14 +182,15 @@ Return ONLY the JSON array, no other text.`;
     }
 
     return NextResponse.json({
-      message: "Briefing generated successfully",
+      message: "Briefing generated successfully.",
       items: briefingContent.length,
     });
-  } catch (error: any) {
-    console.error("API Error (Critical):", error.message);
-    return NextResponse.json(
-      { error: error?.message || "Failed to generate briefing" },
-      { status: 500 }
-    );
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Failed to generate briefing";
+
+    console.error("API Error (Critical):", message);
+
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

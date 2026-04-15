@@ -1,23 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
 import { format } from "date-fns";
 import Link from "next/link";
 import { Archive, ChevronRight, Newspaper } from "lucide-react";
-
-interface BriefingSummary {
-  id: string;
-  date: string;
-  content: { title: string }[];
-  created_at: string;
-}
+import { createClient } from "@/lib/supabase/client";
+import type { StoredBriefing } from "@/lib/briefings";
 
 export default function ArchivePage() {
-  const [briefings, setBriefings] = useState<BriefingSummary[]>([]);
+  const [briefings, setBriefings] = useState<StoredBriefing[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [selectedBriefing, setSelectedBriefing] = useState<BriefingSummary | null>(null);
+  const [selectedBriefing, setSelectedBriefing] = useState<StoredBriefing | null>(
+    null
+  );
   const supabase = createClient();
 
   useEffect(() => {
@@ -25,7 +20,11 @@ export default function ArchivePage() {
       const {
         data: { user },
       } = await supabase.auth.getUser();
-      if (!user) return;
+
+      if (!user) {
+        setLoading(false);
+        return;
+      }
 
       const { data } = await supabase
         .from("briefings")
@@ -37,6 +36,7 @@ export default function ArchivePage() {
       setBriefings(data || []);
       setLoading(false);
     };
+
     fetchBriefings();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -44,12 +44,22 @@ export default function ArchivePage() {
   if (loading) {
     return (
       <div className="page-enter">
-        <h1 style={{ fontSize: "var(--text-2xl)", fontWeight: 700, marginBottom: 24 }}>
+        <h1
+          style={{
+            fontSize: "var(--text-2xl)",
+            fontWeight: 700,
+            marginBottom: 24,
+          }}
+        >
           Briefing Archive
         </h1>
         <div className="archive-list">
-          {[1, 2, 3, 4, 5].map((i) => (
-            <div key={i} className="skeleton" style={{ height: 60, borderRadius: 14 }} />
+          {[1, 2, 3, 4, 5].map((item) => (
+            <div
+              key={item}
+              className="skeleton"
+              style={{ height: 60, borderRadius: 14 }}
+            />
           ))}
         </div>
       </div>
@@ -58,17 +68,15 @@ export default function ArchivePage() {
 
   if (selectedBriefing) {
     const items = selectedBriefing.content || [];
+
     return (
       <div className="page-enter">
         <button
           className="btn btn-ghost"
-          onClick={() => {
-            setSelectedId(null);
-            setSelectedBriefing(null);
-          }}
+          onClick={() => setSelectedBriefing(null)}
           style={{ marginBottom: 16 }}
         >
-          ← Back to Archive
+          Back to Archive
         </button>
         <div className="briefing-header">
           <span className="briefing-date">
@@ -77,10 +85,12 @@ export default function ArchivePage() {
           <h1 className="briefing-title">Past Briefing</h1>
         </div>
         <div className="briefing-list">
-          {items.map((item: any, idx: number) => (
-            <article key={idx} className="briefing-card">
+          {items.map((item, index) => (
+            <article key={`${item.title}-${index}`} className="briefing-card">
               <div className="briefing-card-header">
-                <span className="briefing-card-source">{item.source || item.category}</span>
+                <span className="briefing-card-source">
+                  {item.source || item.category}
+                </span>
                 <span className="badge badge-primary">{item.category}</span>
               </div>
               <h2 className="briefing-card-title">{item.title}</h2>
@@ -117,7 +127,8 @@ export default function ArchivePage() {
           </div>
           <h3 className="empty-state-title">No past briefings</h3>
           <p className="empty-state-text">
-            Your briefing history will appear here once you generate your first briefing.
+            Your briefing history will appear here once you generate your first
+            briefing.
           </p>
           <Link href="/dashboard" className="btn btn-primary" style={{ marginTop: 24 }}>
             Go to Dashboard
@@ -125,22 +136,26 @@ export default function ArchivePage() {
         </div>
       ) : (
         <div className="archive-list">
-          {briefings.map((b) => (
+          {briefings.map((briefing) => (
             <button
-              key={b.id}
+              key={briefing.id}
               className="archive-item"
-              style={{ border: "1px solid var(--border-color)", background: "var(--bg-card)" }}
-              onClick={() => {
-                setSelectedId(b.id);
-                setSelectedBriefing(b);
+              style={{
+                border: "1px solid var(--border-color)",
+                background: "var(--bg-card)",
               }}
+              onClick={() => setSelectedBriefing(briefing)}
             >
-              <Newspaper size={20} style={{ color: "var(--color-primary)", flexShrink: 0 }} />
+              <Newspaper
+                size={20}
+                style={{ color: "var(--color-primary)", flexShrink: 0 }}
+              />
               <span className="archive-item-date">
-                {format(new Date(b.date), "EEEE, MMM d, yyyy")}
+                {format(new Date(briefing.date), "EEEE, MMM d, yyyy")}
               </span>
               <span className="archive-item-count">
-                {Array.isArray(b.content) ? b.content.length : 0} articles
+                {Array.isArray(briefing.content) ? briefing.content.length : 0}{" "}
+                articles
               </span>
               <ChevronRight
                 size={16}

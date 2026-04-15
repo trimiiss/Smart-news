@@ -1,15 +1,15 @@
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
-import { getSupabaseEnv } from "@/lib/supabase/env";
 import { redirect } from "next/navigation";
 import {
-  Zap,
-  Rss,
-  Sparkles,
   BookOpen,
   Clock,
+  Rss,
   Shield,
+  Sparkles,
+  Zap,
 } from "lucide-react";
+import { getSupabaseEnv } from "@/lib/supabase/env";
+import { createClient } from "@/lib/supabase/server";
 
 export default async function HomePage() {
   const { isConfigured } = getSupabaseEnv();
@@ -33,7 +33,6 @@ export default async function HomePage() {
           "radial-gradient(ellipse at 30% 20%, rgba(99,102,241,0.12) 0%, transparent 50%), radial-gradient(ellipse at 70% 80%, rgba(139,92,246,0.08) 0%, transparent 50%), var(--bg-primary)",
       }}
     >
-      {/* Nav */}
       <nav
         style={{
           display: "flex",
@@ -79,7 +78,6 @@ export default async function HomePage() {
         </div>
       </nav>
 
-      {/* Hero */}
       <section
         style={{
           textAlign: "center",
@@ -125,10 +123,17 @@ export default async function HomePage() {
           }}
         >
           Subscribe to RSS feeds, bookmark articles, and let AI create a
-          personalized daily briefing in your favorite voice — casual, professional,
-          witty, or ultra-concise.
+          personalized daily briefing in your favorite voice: casual,
+          professional, witty, or ultra-concise.
         </p>
-        <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
+        <div
+          style={{
+            display: "flex",
+            gap: 12,
+            justifyContent: "center",
+            flexWrap: "wrap",
+          }}
+        >
           <Link href="/signup" className="btn btn-primary btn-lg">
             <Sparkles size={18} /> Start Free
           </Link>
@@ -138,7 +143,6 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Features */}
       <section
         style={{
           padding: "60px 24px 80px",
@@ -157,36 +161,36 @@ export default async function HomePage() {
             {
               icon: <Rss size={24} />,
               title: "RSS Feed Manager",
-              desc: "Subscribe to any RSS feed and organize them by category. Tech, finance, world news — all in one place.",
+              desc: "Subscribe to any RSS feed and organize them by category. Tech, finance, and world news all in one place.",
             },
             {
               icon: <BookOpen size={24} />,
               title: "Smart Bookmarks",
-              desc: "Save individual article URLs and they'll automatically be included in your next AI briefing.",
+              desc: "Save individual article URLs and include them in your next AI briefing automatically.",
             },
             {
               icon: <Sparkles size={24} />,
               title: "AI Summarization",
-              desc: "Powered by GPT-4o-mini, your briefing is generated in whatever voice you choose — casual, professional, or witty.",
+              desc: "Generate your briefing in the voice you want, from professional to witty.",
             },
             {
               icon: <Clock size={24} />,
               title: "Daily Schedule",
-              desc: "Set your preferred briefing time and get a fresh, personalized newsletter every morning.",
+              desc: "Set your preferred briefing time and check a fresh personalized digest every morning.",
             },
             {
               icon: <Shield size={24} />,
               title: "Private & Secure",
-              desc: "Built on Supabase with row-level security. Your feeds and briefings are yours alone.",
+              desc: "Built on Supabase with row-level security so your feeds and briefings stay private.",
             },
             {
               icon: <Zap size={24} />,
               title: "Blazing Fast",
-              desc: "Built with Next.js and edge functions for instant load times and real-time updates.",
+              desc: "Built with Next.js and modern AI tooling for quick updates and smooth browsing.",
             },
-          ].map((feature, i) => (
+          ].map((feature) => (
             <div
-              key={i}
+              key={feature.title}
               className="card"
               style={{
                 display: "flex",
@@ -231,7 +235,6 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Footer */}
       <footer
         style={{
           textAlign: "center",
@@ -241,7 +244,7 @@ export default async function HomePage() {
           color: "var(--text-tertiary)",
         }}
       >
-        Built with Next.js, Supabase & Vercel AI SDK · Smart News Curator
+        Built with Next.js, Supabase, and the Vercel AI SDK.
       </footer>
     </div>
   );
