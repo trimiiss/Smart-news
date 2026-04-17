@@ -27,6 +27,8 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
   const router = useRouter();
   const supabase = createClient();
   const { theme, toggleTheme } = useTheme();
+  const normalizedPathname =
+    pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname;
 
   const mainLinks = [
     { href: "/dashboard", icon: LayoutDashboard, label: "Today's Briefing" },
@@ -46,7 +48,8 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
   };
 
   const isActive = (href: string) =>
-    pathname === href || (href !== "/dashboard" && pathname.startsWith(href));
+    normalizedPathname === href ||
+    (href !== "/dashboard" && normalizedPathname.startsWith(`${href}/`));
 
   return (
     <>
@@ -87,6 +90,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
               key={link.href}
               href={link.href}
               className={`sidebar-link ${isActive(link.href) ? "active" : ""}`}
+              aria-current={isActive(link.href) ? "page" : undefined}
               onClick={onClose}
             >
               <link.icon size={18} />
@@ -100,6 +104,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
               key={link.href}
               href={link.href}
               className={`sidebar-link ${isActive(link.href) ? "active" : ""}`}
+              aria-current={isActive(link.href) ? "page" : undefined}
               onClick={onClose}
             >
               <link.icon size={18} />
