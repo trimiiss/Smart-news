@@ -94,10 +94,11 @@
 
 ## 6. Live URL
 
-> Aplikacioni ekzekutohet lokalisht: **`http://localhost:3000`**
-> Komanda për startim: `npm run dev` (nga direktoria e projektit)
+🌐 **Live deployment (Vercel):** [https://smart-news-mu.vercel.app](https://smart-news-mu.vercel.app)
 
-*(Nëse projekti është i deploy-uar në Vercel, URL-ja shtohet këtu)*
+> Lokalisht: `npm run dev` → `http://localhost:3000`
+
+**Gjatë demos prioritet ka live URL-ja e Vercel** — nuk kërkon asnjë setup lokal dhe funksionon nga çdo browser.
 
 ---
 

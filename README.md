@@ -1,5 +1,7 @@
 # Smart News
 
+🚀 **Live:** [https://smart-news-mu.vercel.app](https://smart-news-mu.vercel.app)
+
 Smart News is a personalized AI news briefing app built with **Next.js 16**, **Supabase**, and **Groq (Llama 3.3-70B)**. Users sign in, subscribe to RSS feeds, bookmark articles, and generate a daily AI-powered briefing in the voice they choose — professional, casual, witty, or TL;DR.
 
 ## Features
@@ -55,6 +57,8 @@ npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+Or use the live deployment: **[https://smart-news-mu.vercel.app](https://smart-news-mu.vercel.app)**
 
 ## Project Structure
 
